@@ -5,14 +5,8 @@ import pytz
 from datetime import datetime, date, timedelta, timezone
 
 # there's a limit from yfinance to only get intraday data for the last 30 days
-CURRENT_DATE = pytz.UTC.localize(datetime.now())
-START_DATE = CURRENT_DATE - timedelta(days=30)
-
-def to_utc(d):
-    return d.tz_convert(timezone.utc)
-
-def df_to_utc(df):
-    df.index = df.index.map(to_utc)
+CURRENT_TIMESTAMP = datetime.now(pytz.timezone('US/Eastern'))
+EARLIEST_TIMESTAMP = CURRENT_TIMESTAMP - timedelta(days=30)
     
 def get_tickerfile(ticker):
     dirname = os.path.dirname(__file__)
@@ -27,24 +21,29 @@ def get_cache(ticker):
         # return empty data frame on error
         return pd.DataFrame()
 
-def get_lastday(df):
+def get_lastrecordtimestamp(df):
     if len(df) == 0:
-        return START_DATE
+        return EARLIEST_TIMESTAMP
+    # return latest data as UTC
     latest_record = df.index.max()
-    return START_DATE if START_DATE > latest_record else latest_record
+    return EARLIEST_TIMESTAMP if EARLIEST_TIMESTAMP > latest_record else latest_record
 
 def update_ticker(ticker):
     old_df = get_cache(ticker)
-    start_date = get_lastday(old_df) + timedelta(minutes=1)
+    start_date = get_lastrecordtimestamp(old_df) + timedelta(minutes=1)
 
     # get new data
     t = yf.Ticker(ticker)
 
-    while start_date < CURRENT_DATE:
-        end_date_max = start_date + timedelta(days=7)
+    if start_date > CURRENT_TIMESTAMP:
+        print("   Ticker {}: {} > {}".format(ticker, start_date, CURRENT_TIMESTAMP))
+ 
+    while start_date < CURRENT_TIMESTAMP:
+        end_date_max = start_date + timedelta(minutes=7*60*24)
         # Don't search beyond now
-        end_date = end_date_max if CURRENT_DATE > end_date_max else CURRENT_DATE
-        print("getting ticker {} from {} to {}".format(ticker, start_date, end_date))
+        end_date = end_date_max if CURRENT_TIMESTAMP > end_date_max else CURRENT_TIMESTAMP
+#        end_date = end_date_max
+        print("   Ticker {}: {} -> {}".format(ticker, start_date, end_date))
         df = t.history(start=start_date, end=end_date, interval="1m", prepost=True)
         if not df.empty:
             # append new data
@@ -56,8 +55,6 @@ def update_ticker(ticker):
 
 def get_ticker(ticker):
     df = get_cache(ticker)
-    # return latest data as UTC
-    df_to_utc(df)
     return df
 
 def get_tickers(type):
