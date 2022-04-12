@@ -1,11 +1,12 @@
 import yfinance as yf
 import pandas as pd
-import numpy as np
 import os, ast
+import pytz
 from datetime import datetime, date, timedelta, timezone
 
 # there's a limit from yfinance to only get intraday data for the last 30 days
-START_DATE = date.today() - timedelta(days=30)
+CURRENT_DATE = pytz.UTC.localize(datetime.now())
+START_DATE = CURRENT_DATE - timedelta(days=30)
 
 def to_utc(d):
     return d.tz_convert(timezone.utc)
@@ -29,24 +30,28 @@ def get_cache(ticker):
 def get_lastday(df):
     if len(df) == 0:
         return START_DATE
-    max = df.index.max()
-    return max.date()
-    
+    latest_record = df.index.max()
+    return START_DATE if START_DATE > latest_record else latest_record
+
 def update_ticker(ticker):
     old_df = get_cache(ticker)
-    start_date = get_lastday(old_df) + timedelta(days=1)  
-    end_date = start_date + timedelta(days=7)  
-    print("getting ticker {} from {} to {}".format(ticker, start_date, end_date))
+    start_date = get_lastday(old_df) + timedelta(minutes=1)
+
     # get new data
     t = yf.Ticker(ticker)
-    df = t.history(start=start_date, end=end_date, interval="1m")
-    if df.empty:
-        print("returned data for ticker is empty - do not update cache")
-    else: 
-        # append new data
-        old_df = old_df.append(df, sort=False)
-        # serialize to CSV
-        old_df.to_csv(get_tickerfile(ticker))
+
+    while start_date < CURRENT_DATE:
+        end_date_max = start_date + timedelta(days=7)
+        # Don't search beyond now
+        end_date = end_date_max if CURRENT_DATE > end_date_max else CURRENT_DATE
+        print("getting ticker {} from {} to {}".format(ticker, start_date, end_date))
+        df = t.history(start=start_date, end=end_date, interval="1m", prepost=True)
+        if not df.empty:
+            # append new data
+            old_df = pd.concat([old_df, df])
+            # serialize to CSV
+            old_df.to_csv(get_tickerfile(ticker))
+        start_date = end_date + timedelta(days=1)
     return old_df
 
 def get_ticker(ticker):
