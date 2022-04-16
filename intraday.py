@@ -1,16 +1,29 @@
 import yfinance as yf
 import pandas as pd
-import os, ast
+import os
 import pytz
-from datetime import datetime, date, timedelta, timezone
+from datetime import datetime, date, timedelta
 
 # there's a limit from yfinance to only get intraday data for the last 30 days
 CURRENT_TIMESTAMP = datetime.now(pytz.timezone('US/Eastern'))
 EARLIEST_TIMESTAMP = CURRENT_TIMESTAMP - timedelta(days=30)
-    
+DIRNAME = os.path.dirname(__file__)
+
+def to_utc(d):
+    return d.astimezone(pytz.UTC)
+
+def df_to_utc(df):
+    df.index = df.index.map(to_utc)
+    return df
+
 def get_tickerfile(ticker):
-    dirname = os.path.dirname(__file__)
-    return dirname + '/data/' + ticker + '.csv'
+    return DIRNAME + '/data/' + ticker.upper() + '.csv'
+
+def get_imagedir(ticker, dirdate):
+    return DIRNAME + '/images/' + dirdate.strftime("%Y-%m-%d") + '/' + ticker.upper() + '/'
+
+def get_imagefile(ticker, imagename, imagedir):
+    return imagedir + '/' + ticker.upper() + '-' + imagename + '.png'
 
 def get_cache(ticker):
     filename = get_tickerfile(ticker)
@@ -25,12 +38,15 @@ def get_lastrecordtimestamp(df):
     if len(df) == 0:
         return EARLIEST_TIMESTAMP
     # return latest data as UTC
-    latest_record = df.index.max()
+    return df.index.max()
+
+def get_nextrecordtimestamp(df):
+    latest_record = get_lastrecordtimestamp(df) + timedelta(minutes=1)
     return EARLIEST_TIMESTAMP if EARLIEST_TIMESTAMP > latest_record else latest_record
 
 def update_ticker(ticker):
     old_df = get_cache(ticker)
-    start_date = get_lastrecordtimestamp(old_df) + timedelta(minutes=1)
+    start_date = get_nextrecordtimestamp(old_df)
 
     # get new data
     t = yf.Ticker(ticker)
@@ -55,7 +71,8 @@ def update_ticker(ticker):
 
 def get_ticker(ticker):
     df = get_cache(ticker)
-    return df
+    # return latest data as UTC
+    return df_to_utc(df)
 
 def get_tickers(type):
     dirname = os.path.dirname(__file__)
