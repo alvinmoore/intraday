@@ -18,12 +18,11 @@ for stock in STOCKS:
 	counter += 1
 	print("\nExporting stock #{}: '{}'".format(counter, stock))
 	df = intraday.get_ticker(stock)
-	lastrecorddate = intraday.get_lastrecordtimestamp(df)
-	end_date = lastrecorddate + timedelta(days=1)
-	DAYS_FILTERS["weekday"] = lastrecorddate.weekday()+1
+	end_date = intraday.get_lastrecordtimestamp(df)
+	DAYS_FILTERS["weekday"] = end_date.weekday()+1
 	print("  {} -> {}".format(df.index.min().date(), df.index.max().date()))
 
-	imagedir = intraday.get_imagedir(stock, lastrecorddate)
+	imagedir = intraday.get_imagedir(stock, end_date)
 	os.makedirs(imagedir, exist_ok=True)
 
 	# Process the current timegroup
