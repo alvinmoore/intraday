@@ -4,7 +4,7 @@ import pytz
 import os
 from datetime import datetime, timedelta, date
 
-STOCKS = [ 'UVXY', '^GSPC', '^VIX', 'AMC', 'GME', 'AAPL', '^SPX', 'TSLA', '^DJI', 'SNP', 'GOOG', 'FB', 'SNOW', 'NFLX' ]
+STOCKS = intraday.get_stocks().index.to_list()
 #STOCKS = [ 'UVXY' ]
 DAYS_FILTERS = { "today" : 1, "lastweek" : 7, "lastmonth" : 30, "lastyear" : 365, "max" : 365 * 20 }
 #DAYS_FILTERS["weekday"] = datetime.today().weekday()+1

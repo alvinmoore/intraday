@@ -16,6 +16,9 @@ def df_to_utc(df):
     df.index = df.index.map(to_utc)
     return df
 
+def get_stocksfile():
+    return DIRNAME + '/config/stocks.csv'
+
 def get_tickerfile(ticker):
     return DIRNAME + '/data/' + ticker.upper() + '.csv'
 
@@ -24,6 +27,15 @@ def get_imagedir(ticker, dirdate):
 
 def get_imagefile(ticker, imagename, imagedir):
     return imagedir + '/' + ticker.upper() + '-' + imagename + '.png'
+
+def get_stocks():
+    filename = get_stocksfile()
+    try:
+        return pd.read_csv(filename, parse_dates=True, index_col='Symbol')
+    except FileNotFoundError:
+        print("Symbols config file '{}' not found.\n".format(filename))
+        # return empty data frame on error
+        return []
 
 def get_cache(ticker):
     filename = get_tickerfile(ticker)
@@ -58,7 +70,6 @@ def update_ticker(ticker):
         end_date_max = start_date + timedelta(minutes=7*60*24)
         # Don't search beyond now
         end_date = end_date_max if CURRENT_TIMESTAMP > end_date_max else CURRENT_TIMESTAMP
-#        end_date = end_date_max
         print("   Ticker {}: {} -> {}".format(ticker, start_date, end_date))
         df = t.history(start=start_date, end=end_date, interval="1m", prepost=True)
         if not df.empty:

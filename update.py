@@ -1,6 +1,7 @@
 import intraday
 
-STOCKS = [ 'UVXY', '^GSPC', '^VIX', 'AMC', 'GME', 'AAPL', '^SPX', 'TSLA', '^DJI', 'SNP', 'GOOG', 'FB', 'SNOW', 'NFLX' ]
+STOCKS = intraday.get_stocks().index.to_list()
+#STOCKS = [ 'UVXY' ]
 
 print("Current time:  {}".format(intraday.CURRENT_TIMESTAMP))
 
